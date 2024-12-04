@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 )
+const maxClients = 10
 
 type Server struct {
 	address  string
@@ -41,6 +42,7 @@ func (s *Server) StartServer() error {
 	return nil
 }
 
+
 func (s *Server) acceptLoop() {
 	for {
 		connection, err := s.listener.Accept()
@@ -48,6 +50,16 @@ func (s *Server) acceptLoop() {
 			log.Println("Error accepting connection:", err)
 			continue
 		}
+
+		s.mu.Lock()
+		if len(s.clients) >= maxClients {
+			s.mu.Unlock()
+			connection.Write([]byte("Server is full. Please try again later.\n"))
+			connection.Close()
+			continue
+		}
+		s.mu.Unlock()
+
 		go s.handleNewClient(connection)
 	}
 }
