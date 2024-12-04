@@ -9,28 +9,23 @@ import (
 	"time"
 )
 
-type Message struct {
-	from    string
-	content []byte
-}
-
 type Server struct {
 	address  string
 	listener net.Listener
 	quitCh   chan struct{}
-	msgChan  chan Message
-	clients  map[net.Conn]string // Map to store client connections and their names
-	history  []string            // Slice to store chat history
-	mu       sync.Mutex          // Mutex to protect shared resources
+	clientJoined chan struct{} // Dedicated channel for new client signals
+	clients  map[net.Conn]string
+	history  []string
+	mu       sync.Mutex
 }
 
 func NewServer(address string) *Server {
 	return &Server{
-		address: address,
-		quitCh:  make(chan struct{}),
-		msgChan: make(chan Message, 100),
-		clients: make(map[net.Conn]string),
-		history: []string{},
+		address:      address,
+		quitCh:       make(chan struct{}),
+		clientJoined: make(chan struct{}), // Initialize the channel
+		clients:      make(map[net.Conn]string),
+		history:      []string{},
 	}
 }
 
@@ -42,8 +37,7 @@ func (s *Server) StartServer() error {
 	s.listener = listen
 	defer listen.Close()
 	go s.acceptLoop()
-	<-s.quitCh //Blocks until a signal is received on quitCh, indicating the server should shut down.
-	close(s.msgChan)
+	<-s.quitCh
 	return nil
 }
 
@@ -79,19 +73,21 @@ func (s *Server) handleNewClient(conn net.Conn) {
         return
     }
 
-    s.mu.Lock()
+	s.mu.Lock()
     s.clients[conn] = name
+    clientCount := len(s.clients) // Get the number of connected clients
     s.mu.Unlock()
 
     // Send chat history to the new client
     s.sendHistory(conn)
 
-    // Broadcast join message
-    joinMsg := fmt.Sprintf("[%s][%s]: %s has joined our chat...\n", 
-        time.Now().Format("2006-01-02 15:04:05"), 
-        name, 
-        name)
-    s.broadcast(joinMsg, nil)
+    // Broadcast join message only if there are other clients
+    if clientCount > 1 {
+        joinMsg := fmt.Sprintf("%s has joined our chat...\n",
+            name,
+            )
+        s.broadcast(joinMsg, conn) // Exclude the joining client from the broadcast
+    }
 
     // Start reading messages
     s.readLoop(conn, name)
