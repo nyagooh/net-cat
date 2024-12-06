@@ -4,20 +4,22 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"time"
 )
+
 const maxClients = 10
 
 type Server struct {
-	address  string
-	listener net.Listener
-	quitCh   chan struct{}
+	address      string
+	listener     net.Listener
+	quitCh       chan struct{}
 	clientJoined chan struct{} // Dedicated channel for new client signals
-	clients  map[net.Conn]string
-	history  []string
-	mu       sync.Mutex
+	clients      map[net.Conn]string
+	history      []string
+	mu           sync.Mutex
 }
 
 func NewServer(address string) *Server {
@@ -42,13 +44,12 @@ func (s *Server) StartServer() error {
 	return nil
 }
 
-
 func (s *Server) acceptLoop() {
 	for {
 		connection, err := s.listener.Accept()
 		if err != nil {
 			log.Println("Error accepting connection:", err)
-			continue
+			connection.Close()
 		}
 
 		s.mu.Lock()
@@ -56,7 +57,6 @@ func (s *Server) acceptLoop() {
 			s.mu.Unlock()
 			connection.Write([]byte("Server is full. Please try again later.\n"))
 			connection.Close()
-			continue
 		}
 		s.mu.Unlock()
 
@@ -65,84 +65,89 @@ func (s *Server) acceptLoop() {
 }
 
 func (s *Server) handleNewClient(conn net.Conn) {
-    defer conn.Close()
+	defer conn.Close()
 
-    // First send welcome message
-    conn.Write([]byte("Welcome to TCP-Chat!\n"))
-    
-    // Then prompt for name
-    conn.Write([]byte("[ENTER YOUR NAME]: "))
-    
-    nameBuf := make([]byte, 1024)
-    n, err := conn.Read(nameBuf)
-    if err != nil || n == 0 {
-        return
-    }
-    name := strings.TrimSpace(string(nameBuf[:n]))
+	conn.Write([]byte("Welcome to TCP-Chat!\n"))
 
-    if name == "" {
-        conn.Write([]byte("Name cannot be empty. Disconnecting...\n"))
-        return
-    }
+	conn.Write([]byte("[ENTER YOUR NAME]: "))
+
+	nameBuf := make([]byte, 1024)
+	n, err := conn.Read(nameBuf)
+	if err != nil || n == 0 {
+		return
+	}
+	name := strings.TrimSpace(string(nameBuf[:n]))
+	if name == "" {
+		conn.Write([]byte("Name cannot be empty. Disconnecting...\n"))
+		conn.Close()
+
+	}
 
 	s.mu.Lock()
-    s.clients[conn] = name
-    clientCount := len(s.clients) // Get the number of connected clients
-    s.mu.Unlock()
+	s.clients[conn] = name
+	for _, ch := range s.clients {
+		if ch == name {
+			log.Println("Please input another name:name already in use")
+		}
+	}
+	clientCount := len(s.clients) // Get the number of connected clients
+	s.mu.Unlock()
 
-    // Send chat history to the new client
-    s.sendHistory(conn)
+	// Send chat history to the new client
+	s.sendHistory(conn)
 
-    // Broadcast join message only if there are other clients
-    if clientCount > 1 {
-        joinMsg := fmt.Sprintf("%s has joined our chat...\n",
-            name,
-            )
-        s.broadcast(joinMsg, conn) // Exclude the joining client from the broadcast
-    }
+	// Broadcast join message only if there are other clients
+	if clientCount > 1 {
+		joinMsg := fmt.Sprintf("%s has joined our chat...\n",
+			name,
+		)
+		s.broadcast(joinMsg, conn, true) // Exclude the joining client from the broadcast
+	}
 
-    // Start reading messages
-    s.readLoop(conn, name)
+	// Start reading messages
+	s.readLoop(conn, name)
 }
 
-func (s *Server) broadcast(message string, excludeConn net.Conn) {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-
-    // Add message to history
-    s.history = append(s.history, message)
-
-    for conn := range s.clients {
-        if conn != excludeConn { // Exclude the specified connection
-            if _, err := conn.Write([]byte(message)); err != nil {
-                log.Println("Error writing to connection:", err)
-            }
-        }
-    }
+func (s *Server) broadcast(message string, excludeConn net.Conn, logs bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !logs {
+		s.history = append(s.history, message)
+	}
+	for conn := range s.clients {
+		if conn != excludeConn { // Exclude the specified connection
+			_, err := conn.Write([]byte(message))
+			if err != nil {
+				log.Println("Error writing to connection:", err)
+			}
+		}
+	}
 }
 
 func (s *Server) readLoop(conn net.Conn, name string) {
-    buffer := make([]byte, 512)
-    for {
-        n, err := conn.Read(buffer)
-        if err != nil {
-            log.Println("read error:", err)
-            s.handleClientDisconnect(conn, name)
-            return
-        }
-        message := strings.TrimSpace(string(buffer[:n]))
-        if message != "" {
-            timestamp := time.Now().Format("2006-01-02 15:04:05")
-            formattedMessage := fmt.Sprintf("[%s][%s]: %s\n", timestamp, name, message)
-            s.broadcast(formattedMessage, nil) // Broadcast to all clients including the sender
-        }
-    }
+	buffer := make([]byte, 512)
+	for {
+		n, err := conn.Read(buffer)
+		if err != nil {
+			log.Println("read error:", err)
+			s.handleClientDisconnect(conn, name)
+			return
+		}
+		message := strings.TrimSpace(string(buffer[:n]))
+		if message != "" {
+			timestamp := time.Now().Format("2006-01-02 15:04:05")
+			formattedMessage := fmt.Sprintf("[%s][%s]: %s\n", timestamp, name, message)
+			conn.Write([]byte("\033[F\033[K"))
+			s.broadcast(formattedMessage, nil, false) // Broadcast to all clients including the sender
+		}
+	}
 }
+
 func (s *Server) handleClientDisconnect(conn net.Conn, name string) {
 	s.mu.Lock()
 	delete(s.clients, conn)
 	s.mu.Unlock()
-	s.broadcast(fmt.Sprintf("%s has left the chat...\n", name), conn)
+	s.broadcast(fmt.Sprintf("%s has left the chat...\n", name), conn, true)
 }
 
 func (s *Server) sendHistory(conn net.Conn) {
@@ -151,13 +156,19 @@ func (s *Server) sendHistory(conn net.Conn) {
 
 	for _, msg := range s.history {
 		if _, err := conn.Write([]byte(msg)); err != nil {
-    log.Println("Error writing history to connection:", err)
-}
+			log.Println("Error writing history to connection:", err)
+		}
 	}
 }
 
 func main() {
-	server := NewServer(":8989")
-	log.Println("Listening on the port :8989")
+	port := "8989"
+	if len(os.Args) > 2 {
+		return
+	} else if len(os.Args) == 2 {
+		port = os.Args[1]
+	}
+	server := NewServer(":" + port)
+	log.Println("Listening on the port", port)
 	log.Fatal(server.StartServer())
 }
