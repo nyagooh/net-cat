@@ -23,6 +23,13 @@ func handleConnection(conn net.Conn) {
 }
 
 func main() {
+
+	//error handling
+	if len(os.Args) != 1 {
+		fmt.Println("Usage: go run .")
+		os.Exit(1)
+	}
+
 	// Print welcome message
 	fmt.Println("Server is starting...")
 
