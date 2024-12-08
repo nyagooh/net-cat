@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func handleConnection(conn net.Conn) {
@@ -26,20 +28,24 @@ func main() {
 
 	//error handling
 	if len(os.Args) != 1 {
-		fmt.Println("Usage: go run .")
-		os.Exit(1)
+		log.Fatal("\nUsage: go run .\n", )
 	}
 
 	// Print welcome message
 	fmt.Println("Server is starting...")
 
-	// Start listening for incoming connections on port 8080
-	listener, err := net.Listen("tcp", "localhost:8080")
+	// Determine the port from environment variable, default to 8080 if not set
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = "8080"
+	}
+	// Start listening for incoming connections on port 8080 as the default port
+	listener, err := net.Listen("tcp", "localhost:"+port)
 	if err != nil {
-		fmt.Println("Error starting server:", err)
-		os.Exit(1)
+		log.Fatalf("\nError starting server: %v", err)
 	}
 	defer listener.Close()
+	log.Infof("\nServer listening on localhost:%s", port)
 
 	// Infinite loop to accept and handle incoming client connections
 	for {
