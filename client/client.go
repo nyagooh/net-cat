@@ -3,10 +3,17 @@ package main
 import (
 	"fmt"
 	"net"
+	"os"
 )
 
 func Client() {
-	conn, err := net.Dial("tcp", "localhost:8080")
+
+	//set the port
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = "8080"
+	}
+	conn, err := net.Dial("tcp", "localhost:"+port)
 	fmt.Println("enter message")
 	message := ""
 	for {
