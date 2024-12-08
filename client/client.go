@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"os"
 	"strings"
 )
 
@@ -32,5 +34,11 @@ func Client() {
 }
 
 func main() {
+
+	//error checking
+	if len(os.Args) != 1 {
+		log.Fatal("\nUsage: go run .\n")
+		os.Exit(1)
+	}
 	Client()
 }
