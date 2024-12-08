@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net"
@@ -13,8 +14,8 @@ func Client() {
 	//select the port to use
 	port := os.Getenv("SERVER_PORT")
 	if port == "" {
-        port = "8080"
-    }
+		port = "8080"
+	}
 	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		fmt.Println("dial error", err)
@@ -23,23 +24,25 @@ func Client() {
 	defer conn.Close()
 
 	fmt.Println("Enter message (type 'exit' to quit):")
-	var messages []string
-	// message := ""
+	reader := bufio.NewReader(os.Stdin)
 	for {
 
-		//allow the user to exit from the
-		fmt.Scan(&messages)
-		if messages[0] == "exit" || messages[0] == "quit" || strings.HasPrefix(messages[0], "bye") {
+		message, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading input:", err)
+			return
+		}
+		message = message[:len(message)-1]
+
+		if message == "exit" || message == "quit" || strings.HasPrefix(message, "bye") {
 			break
 		}
-		for _, m := range messages {
-			_, err := conn.Write([]byte(m))
-			if err != nil {
-				fmt.Println("Error sending message:", err)
-				return
-			}
+
+		_, err = conn.Write([]byte(message))
+		if err != nil {
+			fmt.Println("Error sending message:", err)
+			return
 		}
-		
 	}
 }
 
