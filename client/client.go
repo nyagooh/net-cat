@@ -9,7 +9,13 @@ import (
 )
 
 func Client() {
-	conn, err := net.Dial("tcp", "localhost:8080")
+
+	//select the port to use
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+        port = "8080"
+    }
+	conn, err := net.Dial("tcp", "localhost:"+port)
 	if err != nil {
 		fmt.Println("dial error", err)
 		return
