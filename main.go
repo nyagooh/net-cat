@@ -28,7 +28,7 @@ func main() {
 
 	//error handling
 	if len(os.Args) != 1 {
-		log.Fatal("\nUsage: go run .\n", )
+		log.Fatal("\nUsage: go run .\n")
 	}
 
 	// Print welcome message
@@ -49,6 +49,7 @@ func main() {
 
 	// Infinite loop to accept and handle incoming client connections
 	for {
+
 		// Accept a new incoming connection
 		conn, err := listener.Accept()
 		if err != nil {
@@ -56,7 +57,7 @@ func main() {
 			continue
 		}
 
-		// Handle the connection in a new goroutine
+		// Handle the connection in a lightweight thread concurrently avoiding the blockage of other requests
 		go handleConnection(conn)
 	}
 }
