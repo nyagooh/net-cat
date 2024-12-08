@@ -23,19 +23,23 @@ func Client() {
 	defer conn.Close()
 
 	fmt.Println("Enter message (type 'exit' to quit):")
-	message := ""
+	var messages []string
+	// message := ""
 	for {
 
 		//allow the user to exit from the
-		fmt.Scan(&message)
-		if message == "exit" || message == "quit" || strings.HasPrefix(message, "bye") {
+		fmt.Scan(&messages)
+		if messages[0] == "exit" || messages[0] == "quit" || strings.HasPrefix(messages[0], "bye") {
 			break
 		}
-		_, err := conn.Write([]byte(message))
-		if err != nil {
-			fmt.Println("Error sending message:", err)
-			return
+		for _, m := range messages {
+			_, err := conn.Write([]byte(m))
+			if err != nil {
+				fmt.Println("Error sending message:", err)
+				return
+			}
 		}
+		
 	}
 }
 
