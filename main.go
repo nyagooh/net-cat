@@ -16,7 +16,7 @@ type Server struct {
 	address      string
 	listener     net.Listener
 	quitCh       chan struct{}
-	clientJoined chan struct{} // Dedicated channel for new client signals
+	clientJoined chan struct{} 
 	clients      map[net.Conn]string
 	history      []string
 	mu           sync.Mutex
@@ -26,7 +26,7 @@ func NewServer(address string) *Server {
 	return &Server{
 		address:      address,
 		quitCh:       make(chan struct{}),
-		clientJoined: make(chan struct{}), // Initialize the channel
+		clientJoined: make(chan struct{}),
 		clients:      make(map[net.Conn]string),
 		history:      []string{},
 	}
@@ -66,10 +66,11 @@ func (s *Server) acceptLoop() {
 
 func (s *Server) handleNewClient(conn net.Conn) {
 	defer conn.Close()
-
-	conn.Write([]byte("Welcome to TCP-Chat!\n"))
-
-	conn.Write([]byte("[ENTER YOUR NAME]: "))
+	file,err := os.ReadFile("file.txt")
+	if err!= nil {
+        log.Println("Error opening file:", err)
+    }
+	conn.Write([]byte(file))
 
 	nameBuf := make([]byte, 1024)
 	n, err := conn.Read(nameBuf)
@@ -90,21 +91,20 @@ func (s *Server) handleNewClient(conn net.Conn) {
 			log.Println("Please input another name:name already in use")
 		}
 	}
-	clientCount := len(s.clients) // Get the number of connected clients
+	clientCount := len(s.clients) 
 	s.mu.Unlock()
 
-	// Send chat history to the new client
+	
 	s.sendHistory(conn)
 
-	// Broadcast join message only if there are other clients
 	if clientCount > 1 {
 		joinMsg := fmt.Sprintf("%s has joined our chat...\n",
 			name,
 		)
-		s.broadcast(joinMsg, conn, true) // Exclude the joining client from the broadcast
+		s.broadcast(joinMsg, conn, true) 
 	}
 
-	// Start reading messages
+
 	s.readLoop(conn, name)
 }
 
@@ -115,7 +115,7 @@ func (s *Server) broadcast(message string, excludeConn net.Conn, logs bool) {
 		s.history = append(s.history, message)
 	}
 	for conn := range s.clients {
-		if conn != excludeConn { // Exclude the specified connection
+		if conn != excludeConn { 
 			_, err := conn.Write([]byte(message))
 			if err != nil {
 				log.Println("Error writing to connection:", err)
@@ -138,7 +138,7 @@ func (s *Server) readLoop(conn net.Conn, name string) {
 			timestamp := time.Now().Format("2006-01-02 15:04:05")
 			formattedMessage := fmt.Sprintf("[%s][%s]: %s\n", timestamp, name, message)
 			conn.Write([]byte("\033[F\033[K"))
-			s.broadcast(formattedMessage, nil, false) // Broadcast to all clients including the sender
+			s.broadcast(formattedMessage, nil, false) 
 		}
 	}
 }
