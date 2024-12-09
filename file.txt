@@ -15,4 +15,3 @@ Welcome to TCP-Chat!
 _)      \.___.,|     .'
 \____   )MMMMMP|   .'
      `-'       `--'
-[ENTER YOUR NAME]:
