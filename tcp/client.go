@@ -50,6 +50,13 @@ func (s *Server) handleNewClient(conn net.Conn) {
 		conn.Close()
 		return
 	}
+	for _, v := range name {
+		if !isLetter(v) {
+            conn.Write([]byte("Name can only contain letters. Disconnecting...\n"))
+            conn.Close()
+            return
+        }
+	}
 
 	s.mu.Lock()
 	var clientCount int
@@ -65,6 +72,10 @@ func (s *Server) handleNewClient(conn net.Conn) {
 	}
 
 	s.readLoop(conn, name)
+}
+
+func isLetter(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
 }
 
 func (s *Server) readLoop(conn net.Conn, name string) {
