@@ -16,11 +16,13 @@ type Server struct {
 	address      string
 	listener     net.Listener
 	quitCh       chan struct{}
-	clientJoined chan struct{} 
+	clientJoined chan struct{}
 	clients      map[net.Conn]string
 	history      []string
 	mu           sync.Mutex
 }
+
+var names []string
 
 func NewServer(address string) *Server {
 	return &Server{
@@ -66,11 +68,12 @@ func (s *Server) acceptLoop() {
 
 func (s *Server) handleNewClient(conn net.Conn) {
 	defer conn.Close()
-	file,err := os.ReadFile("file.txt")
-	if err!= nil {
-        log.Println("Error opening file:", err)
-    }
+	file, err := os.ReadFile("file.txt")
+	if err != nil {
+		log.Println("Error opening file:", err)
+	}
 	conn.Write([]byte(file))
+	conn.Write([]byte("[ENTER YOUR NAME]:"))
 
 	nameBuf := make([]byte, 1024)
 	n, err := conn.Read(nameBuf)
@@ -85,25 +88,27 @@ func (s *Server) handleNewClient(conn net.Conn) {
 	}
 
 	s.mu.Lock()
-	s.clients[conn] = name
-	for _, ch := range s.clients {
-		if ch == name {
-			log.Println("Please input another name:name already in use")
+	names = append(names, name)
+	var clientCount int
+	for _, n := range names {
+		if n == name && len(names) > 1 {
+			conn.Write([]byte("Name already taken. Please choose a different one.\n"))
+			conn.Close()
+
+		} else {
+			s.clients[conn] = name
+			clientCount = len(s.clients)
+			s.mu.Unlock()
+			s.sendHistory(conn)
 		}
 	}
-	clientCount := len(s.clients) 
-	s.mu.Unlock()
-
-	
-	s.sendHistory(conn)
 
 	if clientCount > 1 {
 		joinMsg := fmt.Sprintf("%s has joined our chat...\n",
 			name,
 		)
-		s.broadcast(joinMsg, conn, true) 
+		s.broadcast(joinMsg, conn, true)
 	}
-
 
 	s.readLoop(conn, name)
 }
@@ -115,7 +120,7 @@ func (s *Server) broadcast(message string, excludeConn net.Conn, logs bool) {
 		s.history = append(s.history, message)
 	}
 	for conn := range s.clients {
-		if conn != excludeConn { 
+		if conn != excludeConn {
 			_, err := conn.Write([]byte(message))
 			if err != nil {
 				log.Println("Error writing to connection:", err)
@@ -138,7 +143,7 @@ func (s *Server) readLoop(conn net.Conn, name string) {
 			timestamp := time.Now().Format("2006-01-02 15:04:05")
 			formattedMessage := fmt.Sprintf("[%s][%s]: %s\n", timestamp, name, message)
 			conn.Write([]byte("\033[F\033[K"))
-			s.broadcast(formattedMessage, nil, false) 
+			s.broadcast(formattedMessage, nil, false)
 		}
 	}
 }
