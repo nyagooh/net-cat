@@ -22,7 +22,7 @@ type Server struct {
 	mu           sync.Mutex
 }
 
-var names []string
+// var names []string
 
 func NewServer(address string) *Server {
 	return &Server{
@@ -84,24 +84,18 @@ func (s *Server) handleNewClient(conn net.Conn) {
 	if name == "" {
 		conn.Write([]byte("Name cannot be empty. Disconnecting...\n"))
 		conn.Close()
-
+		// s.mu.Unlock()
+		return
 	}
 
 	s.mu.Lock()
-	names = append(names, name)
+	// names = append(names, name)
 	var clientCount int
-	for _, n := range names {
-		if n == name && len(names) > 1 {
-			conn.Write([]byte("Name already taken. Please choose a different one.\n"))
-			conn.Close()
 
-		} else {
-			s.clients[conn] = name
-			clientCount = len(s.clients)
-			s.mu.Unlock()
-			s.sendHistory(conn)
-		}
-	}
+	s.clients[conn] = name
+	clientCount = len(s.clients)
+	s.mu.Unlock()
+	s.sendHistory(conn)
 
 	if clientCount > 1 {
 		joinMsg := fmt.Sprintf("%s has joined our chat...\n",
@@ -169,11 +163,16 @@ func (s *Server) sendHistory(conn net.Conn) {
 func main() {
 	port := "8989"
 	if len(os.Args) > 2 {
-		return
+		fmt.Println("[USAGE]: ./TCPChat $port")
+        return
 	} else if len(os.Args) == 2 {
 		port = os.Args[1]
 	}
 	server := NewServer(":" + port)
-	log.Println("Listening on the port", port)
-	log.Fatal(server.StartServer())
+	if server == nil {
+		log.Fatalf("[USAGE]: ./TCPChat $port")
+		return
+	}
+	fmt.Println("Listening on the port:", port)
+	 log.Fatal(server.StartServer())
 }
