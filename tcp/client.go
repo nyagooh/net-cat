@@ -1,4 +1,4 @@
-package netcat
+package tcp
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func (s *Server) acceptLoop() {
+func (s *Server) AcceptLoop() {
 	for {
 		connection, err := s.listener.Accept()
 		if err != nil {
@@ -31,51 +31,67 @@ func (s *Server) acceptLoop() {
 
 func (s *Server) handleNewClient(conn net.Conn) {
 	defer conn.Close()
-
 	file, err := os.ReadFile("file.txt")
 	if err != nil {
 		log.Println("Error opening file:", err)
 	}
 	conn.Write([]byte(file))
-	conn.Write([]byte("[ENTER YOUR NAME]:"))
 
-	nameBuf := make([]byte, 1024)
-	n, err := conn.Read(nameBuf)
-	if err != nil || n == 0 {
-		return
+	for {
+		conn.Write([]byte("[ENTER YOUR NAME]:"))
+
+		nameBuf := make([]byte, 1024)
+		n, err := conn.Read(nameBuf)
+		if err != nil || n == 0 {
+			return
+		}
+		name := strings.TrimSpace(string(nameBuf[:n]))
+		if name == "" {
+			conn.Write([]byte("Name cannot be empty. Disconnecting...\n"))
+			return
+		}
+
+		// Check for special characters
+		for _, v := range name {
+			if !isLetterOrDigit(v) {
+				conn.Write([]byte("Name can only contain letters and numbers. Disconnecting...\n"))
+				return
+			}
+		}
+
+		s.mu.Lock()
+		nameTaken := false
+		for _, existingName := range s.clients {
+			if existingName == name {
+				nameTaken = true
+				break
+			}
+		}
+		s.mu.Unlock()
+
+		if nameTaken {
+			conn.Write([]byte("Name is already taken. Please choose a different name.\n"))
+		} else {
+			s.mu.Lock()
+			s.clients[conn] = name
+			clientCount := len(s.clients)
+			s.mu.Unlock()
+
+			s.sendHistory(conn)
+
+			if clientCount > 1 {
+				joinMsg := fmt.Sprintf("%s has joined our chat...\n", name)
+				s.broadcast(joinMsg, conn, true)
+			}
+
+			s.readLoop(conn, name)
+			break
+		}
 	}
-	name := strings.TrimSpace(string(nameBuf[:n]))
-	if name == "" {
-		conn.Write([]byte("Name cannot be empty. Disconnecting...\n"))
-		conn.Close()
-		return
-	}
-	for _, v := range name {
-		if !isLetter(v) {
-            conn.Write([]byte("Name can only contain letters. Disconnecting...\n"))
-            conn.Close()
-            return
-        }
-	}
-
-	s.mu.Lock()
-	var clientCount int
-
-	s.clients[conn] = name
-	clientCount = len(s.clients)
-	s.mu.Unlock()
-	s.sendHistory(conn)
-
-	if clientCount > 1 {
-		joinMsg := fmt.Sprintf("%s has joined our chat...\n", name)
-		s.broadcast(joinMsg, conn, true)
-	}
-
-	s.readLoop(conn, name)
 }
 
-func isLetter(r rune) bool {
-	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+func isLetterOrDigit(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9')
 }
 
 func (s *Server) readLoop(conn net.Conn, name string) {

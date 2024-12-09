@@ -1,4 +1,4 @@
-package netcat
+package tcp
 
 import (
 	"net"
@@ -34,7 +34,7 @@ func (s *Server) StartServer() error {
 	}
 	s.listener = listen
 	defer listen.Close()
-	go s.acceptLoop()
+	go s.AcceptLoop()
 	<-s.quitCh
 	return nil
 }
