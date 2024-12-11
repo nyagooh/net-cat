@@ -14,15 +14,17 @@ func (s *Server) AcceptLoop() {
 		connection, err := s.listener.Accept()
 		if err != nil {
 			log.Println("Error accepting connection:", err)
-			connection.Close()
+			continue // Skip to the next iteration if there's an error
 		}
 
 		s.mu.Lock()
-		if len(s.clients) >= maxClients {
+		if len(s.clients) > maxClients {
 			s.mu.Unlock()
 			connection.Write([]byte("Server is full. Please try again later.\n"))
 			connection.Close()
+			continue // Skip to the next iteration if the server is full
 		}
+		s.clients[connection] = "" // Add the connection to the clients map
 		s.mu.Unlock()
 
 		go s.handleNewClient(connection)
@@ -104,9 +106,15 @@ func (s *Server) readLoop(conn net.Conn, name string) {
 			return
 		}
 		message := strings.TrimSpace(string(buffer[:n]))
-		if message != "" {
-			timestamp := time.Now().Format("2006-01-02 15:04:05")
-			formattedMessage := fmt.Sprintf("[%s][%s]: %s\n", timestamp, name, message)
+		timestamp := time.Now().Format("2006-01-02 15:04:05")
+		formattedMessage := fmt.Sprintf("[%s][%s]: %s\n", timestamp, name, message)
+
+		if message == "" {
+			// Send the empty message only to the sender
+			conn.Write([]byte("\033[F\033[K"))
+			conn.Write([]byte(formattedMessage))
+		} else {
+			// Broadcast non-empty messages to all clients
 			conn.Write([]byte("\033[F\033[K"))
 			s.broadcast(formattedMessage, nil, false)
 		}
