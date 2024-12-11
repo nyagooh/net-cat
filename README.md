@@ -1,8 +1,29 @@
 # Net-Cat
 ![Net-Cat Banner](https://i.pinimg.com/736x/93/33/75/933375235e70486148d5880d2a2bd617.jpg)
+
 Net-Cat is a TCP-based chat application written in Go that replicates the behavior of the traditional `netcat` utility in a Server-Client architecture. It supports multi-client group chats with robust features to make real-time communication seamless and engaging.
 
 ---
+## Table of Contents
+- [Net-Cat](#net-cat)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Learning Objectives](#learning-objectives)
+  - [Features](#features)
+  - [Installation](#installation)
+    - [Clone the Repository](#clone-the-repository)
+  - [Usage](#usage)
+    - [Run the Server](#run-the-server)
+    - [Connecting as a Client](#connecting-as-a-client)
+  - [Example](#example)
+    - [Starting server](#starting-server)
+    - [Connecting as a Client](#connecting-as-a-client-1)
+    - [Chat Messages](#chat-messages)
+    - [Leave Notifications:](#leave-notifications)
+  - [Error Handling](#error-handling)
+  - [Contributions](#contributions)
+  - [Authors](#authors)
+  - [License](#license)
 
 ## Overview
 
@@ -49,8 +70,7 @@ Inspired by the original `netcat` (`nc`), this project enables learning about ne
 
 ---
 
-### Usage
- ## Steps to Install
+ ## Installation
 - Install Go (https://golang.org/doc/install).
 ### Clone the Repository
 Open your terminal and run the following commands:
@@ -64,7 +84,8 @@ for gitea:
 git clone https://learn.zone01kisumu.ke/git/nymaina/net-cat
 cd net-cat
 ```
-## Run the Server
+## Usage
+### Run the Server
 
 Start the server on the default port `8989`:
 
@@ -77,23 +98,29 @@ go run . 2525
 ```
 The server will listen for incoming connections on the specified port.
 
-## Connecting as a Client
+### Connecting as a Client
 You can use any TCP client to connect to the server (e.g., nc or this application). For example:
  - This will connect when using a different laptop
 ```bash
 nc <server_ip> <port>
 ```
 - Example to connect locally:
-  ```bash
-  nc localhost 2525
-  ```
-
-## Example Interaction
-  #### server
-  ```bash
-  Listening on the port :2525
+ ```bash
+nc localhost 2525
 ```
-#### client interaction
+
+## Example 
+  ### Starting server
+  ```bash
+ go run . 2525
+Listening on the port :2525
+
+```
+### Connecting as a Client
+```bash
+nc localhost 2525
+```
+This is will be the  output
 ```bash
 Welcome to TCP-Chat!
       _nnnn_
@@ -112,35 +139,121 @@ __| ".        |\dS"qML
 _)      \.___.,|     .'
 \____   )MMMMMP|   .'
      `-'       `--'
-[ENTER YOUR NAME]: Alice
+[ENTER YOUR NAME]: 
 ```
-#### Chat Messages
+output after you enter your name
 ```bash
-[2024-12-09 14:30:01][Alice]: Hello, everyone!
+Welcome to TCP-Chat!
+      _nnnn_
+     dGGGGMMb
+    @p~qp~~qMb
+    M|@||@) M|
+    @,----.JM|
+   JS^\__/  qKL
+  dZP        qKRb
+ dZP          qKKb
+fZP            SMMb
+HZM            MMMM
+FqM            MMMM
+__| ".        |\dS"qML
+|    `.       | `' \Zq
+_)      \.___.,|     .'
+\____   )MMMMMP|   .'
+     `-'       `--' 
+[ENTER YOUR NAME]: John
+Hello, world!
+[2024-12-09 14:40:10][John]: Hello, world!
+```
+### Chat Messages
+```bash
+[2024-12-09 14:40:10][John]: Hello, world!
 [2024-12-09 14:30:10][Bob]: Hi Alice!
 ```
-#### Leave Notifications:
+### Leave Notifications:
 ```bash
 Bob has left the chat.
 ```
-### Contributions
+## Error Handling
+
+ **Empty Username Input**:
+
+The client will not be authenticated
+```bash
+Welcome to TCP-Chat!
+         _nnnn_
+        dGGGGMMb
+       @p~qp~~qMb
+       M|@||@) M|
+       @,----.JM|
+      JS^\__/  qKL
+     dZP        qKRb
+    dZP          qKKb
+   fZP            SMMb
+   HZM            MMMM
+   FqM            MMMM
+ __| ".        |\dS"qML
+ |    `.       | `' \Zq
+_)      \.___.,|     .'
+\____   )MMMMMP|   .'
+     `-'       `--'
+[ENTER YOUR NAME]:
+Name cannot be empty. Disconnecting...
+```
+
+**Duplicate Username**:
+
+The client will received a message to change name
+ ```bash
+Welcome to TCP-Chat!
+         _nnnn_
+        dGGGGMMb
+       @p~qp~~qMb
+       M|@||@) M|
+       @,----.JM|
+      JS^\__/  qKL
+     dZP        qKRb
+    dZP          qKKb
+   fZP            SMMb
+   HZM            MMMM
+   FqM            MMMM
+ __| ".        |\dS"qML
+ |    `.       | `' \Zq
+_)      \.___.,|     .'
+\____   )MMMMMP|   .'
+     `-'       `--'
+[ENTER YOUR NAME]:ann
+Name is already taken. Please choose a different name.
+[ENTER YOUR NAME]:
+```
+ **Maximum Connections**:
+
+- The server supports a maximum of 10 concurrent clients.
+
+ **Invalid Port Input**:
+ ```bash
+ go run . 2525 localhost
+ ```
+ the program will throw an error message and exit
+ ```bash
+[USAGE]: ./TCPChat $port
+
+ ```
+## Contributions
 
 Contributions are welcome! If you’d like to improve the project or add new features:
-
 - Fork this repository.
 - Create a new branch: git checkout -b feature-branch-name.
 - Commit your changes: git commit -m "Add a new feature".
 - Push the branch: git push origin feature-branch-name.
 - Submit a pull request.
 
-### Authors
+## Authors
 
 This project was developed by:
- - nyagooh
- - okwach
- - Anxielray
-- 
-### [License](/home/nymaina/Documents/net-cat/LICENSE)
+ - [Nyagooh](https://github.com/nyagooh/)
+ - [Hezron](https://github.com/hezronokwach)
+ - [Anxielray](https://github.com/anxielray)
+## [License](/home/nymaina/Documents/net-cat/LICENSE)
 
 
 
