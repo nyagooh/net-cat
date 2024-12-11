@@ -71,15 +71,10 @@ Inspired by the original `netcat` (`nc`), this project enables learning about ne
 ---
 
  ## Installation
-- Install Go (https://golang.org/doc/install).
+- Install Go
+   (https://golang.org/doc/install).
 ### Clone the Repository
 Open your terminal and run the following commands:
-
-for github:
-```bash
-git clone https://github.com/nyagooh/net-cat.git
-```
-for gitea:
 ```bash
 git clone https://learn.zone01kisumu.ke/git/nymaina/net-cat
 cd net-cat
