@@ -121,39 +121,3 @@ func TestServer_broadcast(t *testing.T) {
 		})
 	}
 }
-
-func TestServer_sendHistory(t *testing.T) {
-	type fields struct {
-		address      string
-		listener     net.Listener
-		quitCh       chan struct{}
-		clientJoined chan struct{}
-		clients      map[net.Conn]string
-		history      []string
-		mu           sync.Mutex
-	}
-	type args struct {
-		conn net.Conn
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := &Server{
-				address:      tt.fields.address,
-				listener:     tt.fields.listener,
-				quitCh:       tt.fields.quitCh,
-				clientJoined: tt.fields.clientJoined,
-				clients:      tt.fields.clients,
-				history:      tt.fields.history,
-				mu:           tt.fields.mu,
-			}
-			s.sendHistory(tt.args.conn)
-		})
-	}
-}
