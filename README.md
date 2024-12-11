@@ -72,7 +72,8 @@ Inspired by the original `netcat` (`nc`), this project enables learning about ne
 
  ## Installation
 - Install Go
-   (https://golang.org/doc/install).
+  
+(https://golang.org/doc/install).
 ### Clone the Repository
 Open your terminal and run the following commands:
 ```bash
